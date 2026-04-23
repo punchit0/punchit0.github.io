@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Draft Intel — LoL Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold:#C89B3C;--gold-dim:#785A28;--bg-deep:#010A13;--bg-panel:#0D1B2A;
+    --bg-card:#112233;--border:#1E3A5F;--border-gold:#463714;
+    --text-primary:#C8AA6E;--text-secondary:#8A7040;--text-muted:#3C3727;
+    --blue:#0BC4E3;--red:#C84B31;--green:#1EA07B;--purple:#9B5DE5;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:var(--bg-deep);color:var(--text-primary);min-height:100vh;}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 40% at 50% 0%,rgba(200,155,60,.06) 0%,transparent 60%),radial-gradient(ellipse 30% 30% at 85% 85%,rgba(11,196,227,.04) 0%,transparent 50%);pointer-events:none;z-index:0;}
+  .app{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:0 20px 60px;}
+
+  header{display:flex;align-items:center;justify-content:space-between;padding:24px 0 18px;border-bottom:1px solid var(--border-gold);margin-bottom:20px;}
+  .logo{display:flex;align-items:center;gap:12px;}
+  .logo-hex{width:38px;height:38px;background:linear-gradient(135deg,var(--gold-dim),var(--gold));clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--bg-deep);font-weight:700;}
+  .logo-text h1{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:var(--gold);letter-spacing:3px;text-transform:uppercase;}
+  .logo-text p{font-size:10px;color:var(--text-secondary);letter-spacing:3px;text-transform:uppercase;margin-top:-2px;}
+  .header-right{display:flex;align-items:center;gap:10px;}
+  .patch-tag{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;color:var(--blue);border:1px solid rgba(11,196,227,.25);padding:4px 12px;letter-spacing:1px;display:flex;align-items:center;gap:5px;}
+  .patch-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+  .session-tag{font-size:11px;color:var(--text-secondary);letter-spacing:1px;text-transform:uppercase;}
+
+  .phase-bar{display:flex;margin-bottom:20px;border:1px solid var(--border);overflow:hidden;}
+  .phase-step{flex:1;padding:9px 4px;text-align:center;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);background:var(--bg-panel);border-right:1px solid var(--border);transition:all .3s;}
+  .phase-step:last-child{border-right:none;}
+  .phase-step.active{background:rgba(200,155,60,.08);color:var(--gold);}
+  .phase-step.done{background:rgba(30,160,123,.06);color:var(--green);}
+
+  .layout{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start;}
+  .left-panel{display:flex;flex-direction:column;gap:12px;}
+  .panel{background:var(--bg-panel);border:1px solid var(--border);}
+  .panel-header{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .panel-title{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);}
+  .panel-sub{font-size:10px;color:var(--text-muted);letter-spacing:1px;}
+
+  .drag-zone{margin:14px;border:2px dashed var(--border-gold);min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:all .2s;position:relative;padding:20px;}
+  .drag-zone.active-drag{border-color:var(--gold);background:rgba(200,155,60,.06);transform:scale(1.01);}
+  .drag-zone.has-image{border-style:solid;border-color:var(--gold-dim);padding:8px;min-height:auto;}
+  .drag-icon{font-size:32px;opacity:.4;transition:all .2s;}
+  .drag-zone.active-drag .drag-icon{opacity:.8;transform:scale(1.1);}
+  .drag-label{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;letter-spacing:1px;color:var(--text-secondary);text-align:center;}
+  .drag-hint{font-size:10px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;}
+  #previewImg{width:100%;max-height:260px;object-fit:contain;display:none;}
+  #fileInput{display:none;}
+  .drag-clear{position:absolute;top:8px;right:8px;width:22px;height:22px;background:rgba(200,75,49,.3);border:1px solid var(--red);color:var(--red);font-size:12px;cursor:pointer;display:none;align-items:center;justify-content:center;}
+  .drag-clear:hover{background:rgba(200,75,49,.5);}
+  .drag-clear.visible{display:flex;}
+
+  .context-row{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .ctx-label{font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-right:2px;}
+  .ctx-btn{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;letter-spacing:1px;padding:4px 10px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);cursor:pointer;transition:all .15s;text-transform:uppercase;}
+  .ctx-btn:hover{border-color:var(--gold-dim);color:var(--gold);}
+  .ctx-btn.sel{border-color:var(--gold);color:var(--gold);background:rgba(200,155,60,.08);}
+
+  .analyze-wrap{padding:0 14px 14px;}
+  .analyze-btn{width:100%;padding:13px;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;letter-spacing:3px;text-transform:uppercase;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--bg-deep);border:none;cursor:pointer;transition:all .2s;clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);}
+  .analyze-btn:hover:not(:disabled){filter:brightness(1.15);}
+  .analyze-btn:disabled{background:var(--border);color:var(--text-muted);cursor:not-allowed;clip-path:none;}
+  .analyze-btn.loading{background:rgba(200,155,60,.15);color:var(--gold);border:1px solid var(--gold-dim);clip-path:none;animation:glow 1.5s infinite;}
+  @keyframes glow{0%,100%{opacity:1}50%{opacity:.5}}
+
+  .timeline{padding:10px 14px 12px;border-top:1px solid var(--border);}
+  .timeline-title{font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+  .timeline-items{display:flex;flex-direction:column;gap:3px;max-height:130px;overflow-y:auto;}
+  .tl-item{display:flex;align-items:center;gap:8px;padding:5px 8px;background:var(--bg-card);cursor:pointer;transition:background .15s;border-left:2px solid transparent;}
+  .tl-item:hover{background:rgba(200,155,60,.05);border-left-color:var(--gold-dim);}
+  .tl-item.current{border-left-color:var(--gold);}
+  .tl-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+  .tl-ban{background:var(--red);}.tl-pick{background:var(--green);}.tl-build{background:var(--purple);}
+  .tl-text{font-size:11px;color:var(--text-secondary);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+  .tl-time{font-size:10px;color:var(--text-muted);}
+
+  .profile-body{padding:12px 14px;}
+  .profile-name{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--gold);letter-spacing:1px;margin-bottom:3px;}
+  .profile-sub{font-size:11px;color:var(--text-secondary);margin-bottom:10px;}
+  .stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;}
+  .stat{background:var(--bg-card);border:1px solid var(--border);padding:7px 8px;}
+  .stat-l{font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;}
+  .stat-v{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;color:var(--gold);}
+  .stat-s{font-size:10px;color:var(--text-secondary);}
+
+  .picks-body{padding:8px 12px 12px;}
+  .pick-item{display:flex;align-items:center;gap:8px;padding:5px 8px;background:var(--bg-card);border-left:2px solid transparent;margin-bottom:3px;transition:all .15s;}
+  .pick-item:hover{border-left-color:var(--gold-dim);}
+  .pick-s{border-left-color:var(--purple)!important;}.pick-a{border-left-color:var(--green)!important;}
+  .pi-name{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;color:var(--text-primary);flex:1;}
+  .pi-tier{font-size:9px;font-weight:700;padding:1px 5px;}
+  .tier-s{background:rgba(155,93,229,.2);color:var(--purple);}
+  .tier-a{background:rgba(30,160,123,.2);color:var(--green);}
+  .tier-b{background:rgba(200,155,60,.15);color:var(--gold-dim);}
+  .tier-c{background:rgba(200,75,49,.15);color:var(--red);}
+  .pi-wr{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;}
+  .wr-g{color:var(--green);}.wr-y{color:var(--gold);}.wr-r{color:var(--red);}
+  .pi-g{font-size:10px;color:var(--text-muted);min-width:48px;text-align:right;}
+
+  .right-panel{display:flex;flex-direction:column;gap:12px;}
+  .ctx-accum{background:var(--bg-panel);border:1px solid var(--border);padding:10px 16px;display:none;align-items:center;gap:12px;}
+  .ctx-accum.show{display:flex;}
+  .ctx-text{font-size:11px;color:var(--text-secondary);line-height:1.5;flex:1;}
+  .ctx-count{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--gold);border:1px solid var(--border-gold);padding:2px 8px;}
+
+  .empty-state{background:var(--bg-panel);border:1px solid var(--border);padding:60px 30px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px;}
+  .empty-icon{font-size:40px;opacity:.2;}
+  .empty-title{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);}
+  .empty-sub{font-size:12px;color:var(--text-muted);line-height:1.7;max-width:320px;}
+
+  .loading-panel{background:var(--bg-panel);border:1px solid var(--border);padding:50px;text-align:center;display:none;flex-direction:column;align-items:center;gap:16px;}
+  .loading-panel.show{display:flex;}
+  .spinner{width:44px;height:44px;border:2px solid var(--border-gold);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-msg{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--gold-dim);}
+  .loading-steps{display:flex;flex-direction:column;gap:4px;margin-top:8px;}
+  .loading-step{font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:8px;justify-content:center;transition:color .3s;}
+  .loading-step.active{color:var(--gold);}.loading-step.done{color:var(--green);}
+  .ls-dot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+  .analysis-panel{background:var(--bg-panel);border:1px solid var(--border);display:none;}
+  .analysis-panel.show{display:block;}
+  .full-analysis{padding:20px;display:flex;flex-direction:column;gap:20px;}
+
+  .block-title{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+  .block-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  .pick-rec{background:rgba(200,155,60,.05);border:1px solid var(--border-gold);padding:16px 20px;display:flex;align-items:flex-start;gap:20px;}
+  .rec-champion{font-family:'Rajdhani',sans-serif;font-size:36px;font-weight:700;color:var(--gold);letter-spacing:2px;line-height:1;}
+  .rec-role{font-size:11px;color:var(--text-secondary);letter-spacing:2px;text-transform:uppercase;margin-top:4px;}
+  .rec-alts{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+  .alt-chip{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;padding:3px 10px;border:1px solid var(--border);color:var(--text-secondary);}
+  .rec-reason{font-size:13px;color:var(--text-secondary);line-height:1.7;margin-bottom:10px;}
+  .rec-gameplan{font-size:12px;color:var(--text-muted);line-height:1.7;padding:10px 12px;background:var(--bg-card);border-left:2px solid var(--gold-dim);}
+
+  .draft-table{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .draft-team{background:var(--bg-card);border:1px solid var(--border);padding:10px 12px;}
+  .dt-header{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+  .dt-ally .dt-header{color:var(--green);}.dt-enemy .dt-header{color:var(--red);}
+  .dt-pick{font-size:13px;color:var(--text-primary);padding:3px 0;display:flex;align-items:center;gap:6px;}
+  .dt-pick-dot{width:5px;height:5px;border-radius:50%;}
+  .dp-ally{background:var(--green);}.dp-enemy{background:var(--red);}
+  .dt-ban{font-size:11px;color:var(--text-muted);text-decoration:line-through;}
+  .dt-bans-label{font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-top:6px;margin-bottom:3px;}
+
+  .alerts-list{display:flex;flex-direction:column;gap:6px;}
+  .alert{padding:9px 12px;font-size:12px;line-height:1.6;border-left:3px solid;display:flex;align-items:flex-start;gap:8px;}
+  .alert-icon{flex-shrink:0;font-size:13px;}
+  .alert-warn{border-color:var(--gold);background:rgba(200,155,60,.05);color:var(--text-secondary);}
+  .alert-good{border-color:var(--green);background:rgba(30,160,123,.05);color:#7DCEA0;}
+  .alert-danger{border-color:var(--red);background:rgba(200,75,49,.05);color:#E59090;}
+
+  .build-items{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+  .b-item{background:var(--bg-card);border:1px solid var(--border);padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:68px;max-width:80px;}
+  .b-item img{width:44px;height:44px;border-radius:4px;border:1px solid var(--border-gold);}
+  .b-item-ph{width:44px;height:44px;border-radius:4px;border:1px solid var(--border-gold);background:var(--bg-panel);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--gold-dim);}
+  .b-item-name{font-size:9px;color:var(--text-secondary);text-align:center;line-height:1.3;}
+  .b-item-num{font-size:9px;color:var(--text-muted);font-weight:600;}
+
+  .runes-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+  .rune-block{background:var(--bg-card);border:1px solid var(--border);padding:10px 12px;}
+  .rb-title{font-size:9px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;}
+  .rune-keystone{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--gold);margin-bottom:6px;}
+  .rune-entry{font-size:12px;color:var(--text-secondary);padding:2px 0;display:flex;align-items:center;gap:6px;}
+  .re-dot{width:4px;height:4px;border-radius:50%;background:var(--gold-dim);flex-shrink:0;}
+  .skill-order{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;color:var(--text-primary);letter-spacing:2px;padding-top:10px;border-top:1px solid var(--border);margin-top:8px;}
+  .skill-note{font-size:11px;color:var(--text-muted);margin-top:4px;}
+
+  .matchup-list{display:flex;flex-direction:column;gap:5px;}
+  .mu-item{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:var(--bg-card);border-left:3px solid transparent;}
+  .mu-high{border-left-color:var(--red);}.mu-mid{border-left-color:var(--gold);}
+  .mu-low{border-left-color:var(--green);}.mu-gank{border-left-color:var(--blue);}.mu-ult{border-left-color:var(--purple);}
+  .mu-name{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;color:var(--text-primary);min-width:90px;}
+  .mu-note{font-size:11px;color:var(--text-secondary);line-height:1.5;flex:1;}
+  .mu-tag{font-size:9px;font-weight:700;padding:2px 6px;letter-spacing:.5px;white-space:nowrap;flex-shrink:0;}
+  .tag-high{background:rgba(200,75,49,.2);color:var(--red);}
+  .tag-mid{background:rgba(200,155,60,.15);color:var(--gold);}
+  .tag-low{background:rgba(30,160,123,.15);color:var(--green);}
+  .tag-gank{background:rgba(11,196,227,.15);color:var(--blue);}
+  .tag-ult{background:rgba(155,93,229,.2);color:var(--purple);}
+
+  ::-webkit-scrollbar{width:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border-gold);}
+  @media(max-width:900px){.layout{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="logo">
+      <div class="logo-hex">⚔</div>
+      <div class="logo-text">
+        <h1>Draft Intel</h1>
+        <p>League of Legends · Asistente de jungla</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="session-tag" id="sessionCount">0 capturas esta sesión</span>
+      <div class="patch-tag">
+        <div class="patch-dot"></div>
+        <span id="patchLabel">Cargando...</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="phase-bar">
+    <div class="phase-step active" id="ps-1">01 · Bans</div>
+    <div class="phase-step" id="ps-2">02 · Picks</div>
+    <div class="phase-step" id="ps-3">03 · Mi turno</div>
+    <div class="phase-step" id="ps-4">04 · Build</div>
+    <div class="phase-step" id="ps-5">05 · Partida</div>
+  </div>
+
+  <div class="layout">
+    <div class="left-panel">
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Captura del lobby</span>
+          <span class="panel-sub">Arrastrá · Ctrl+V · Clic</span>
+        </div>
+        <div class="drag-zone" id="dragZone">
+          <input type="file" id="fileInput" accept="image/*">
+          <div class="drag-icon">🎮</div>
+          <div class="drag-label">Arrastrá la captura aquí</div>
+          <div class="drag-hint">o hacé clic para seleccionar</div>
+          <img id="previewImg" alt="Captura"/>
+          <div class="drag-clear" id="dragClear">✕</div>
+        </div>
+        <div class="context-row">
+          <span class="ctx-label">Momento:</span>
+          <button class="ctx-btn sel" data-phase="bans">Bans</button>
+          <button class="ctx-btn" data-phase="picks">Picks</button>
+          <button class="ctx-btn" data-phase="mi-pick">Mi pick</button>
+          <button class="ctx-btn" data-phase="completo">Completo</button>
+        </div>
+        <div class="analyze-wrap">
+          <button class="analyze-btn" id="analyzeBtn" disabled>Analizar lobby</button>
+        </div>
+        <div id="timelineWrap" style="display:none;">
+          <div class="timeline">
+            <div class="timeline-title">Historial de esta sesión</div>
+            <div class="timeline-items" id="timelineItems"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Perfil</span><span class="panel-sub">LAS · Flex S26</span></div>
+        <div class="profile-body">
+          <div class="profile-name">SIN LP CON RISAS <span style="color:var(--text-muted);font-size:12px;">#LPB</span></div>
+          <div class="profile-sub">Jungla · Pico Emerald S14</div>
+          <div class="stats-row">
+            <div class="stat"><div class="stat-l">Rango</div><div class="stat-v" style="font-size:13px;">Gold 3</div><div class="stat-s">332 LP</div></div>
+            <div class="stat"><div class="stat-l">WR</div><div class="stat-v">51%</div><div class="stat-s">184W·175L</div></div>
+            <div class="stat"><div class="stat-l">Games</div><div class="stat-v">359</div><div class="stat-s">S26</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Mejores picks</span><span class="panel-sub">personal + meta</span></div>
+        <div class="picks-body">
+          <div class="pick-item pick-s"><span class="pi-name">Sylas</span><span class="pi-tier tier-s">S</span><span class="pi-wr wr-g">65%</span><span class="pi-g">46 games</span></div>
+          <div class="pick-item pick-s"><span class="pi-name">Vayne</span><span class="pi-tier tier-a">A</span><span class="pi-wr wr-g">70%</span><span class="pi-g">20 games</span></div>
+          <div class="pick-item pick-s"><span class="pi-name">Udyr</span><span class="pi-tier tier-a">A</span><span class="pi-wr wr-g">71%</span><span class="pi-g">14 games</span></div>
+          <div class="pick-item pick-a"><span class="pi-name">Elise</span><span class="pi-tier tier-a">A</span><span class="pi-wr wr-g">63%</span><span class="pi-g">8 games</span></div>
+          <div class="pick-item pick-a"><span class="pi-name">Lux</span><span class="pi-tier tier-a">A</span><span class="pi-wr wr-g">67%</span><span class="pi-g">6 games</span></div>
+          <div class="pick-item"><span class="pi-name">Volibear</span><span class="pi-tier tier-b">B</span><span class="pi-wr wr-y">50%</span><span class="pi-g">10 games</span></div>
+          <div class="pick-item"><span class="pi-name">Yasuo</span><span class="pi-tier tier-c">C</span><span class="pi-wr wr-r">46%</span><span class="pi-g">39 games</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="right-panel">
+
+      <div class="ctx-accum" id="ctxAccum">
+        <span style="font-size:14px;">🧠</span>
+        <span class="ctx-text" id="ctxText">Contexto acumulado de capturas anteriores.</span>
+        <span class="ctx-count" id="ctxCount">0 prev</span>
+      </div>
+
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">⚔</div>
+        <div class="empty-title">Esperando captura</div>
+        <div class="empty-sub">Arrastrá una captura del lobby a la zona de la izquierda. Cada análisis acumula el contexto automáticamente — cuantas más capturas mandes durante el draft, más precisa es la recomendación.</div>
+      </div>
+
+      <div class="loading-panel" id="loadingPanel">
+        <div class="spinner"></div>
+        <div class="loading-msg">Analizando...</div>
+        <div class="loading-steps">
+          <div class="loading-step" id="ls-1"><div class="ls-dot"></div>Leyendo picks y bans</div>
+          <div class="loading-step" id="ls-2"><div class="ls-dot"></div>Consultando meta patch <span id="ls-patch">actual</span></div>
+          <div class="loading-step" id="ls-3"><div class="ls-dot"></div>Cruzando con historial personal</div>
+          <div class="loading-step" id="ls-4"><div class="ls-dot"></div>Generando recomendación y build</div>
+        </div>
+      </div>
+
+      <div class="analysis-panel" id="analysisPanel">
+        <div class="panel-header">
+          <span class="panel-title" id="analysisTitle">Análisis del draft</span>
+          <span class="panel-sub" id="analysisTime"></span>
+        </div>
+        <div class="full-analysis" id="fullAnalysis"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const API_KEY = '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';
+
+let CURRENT_PATCH = '26.8';
+let DDRAGON_VERSION = '16.8.1';
+
+async function fetchCurrentPatch() {
+  try {
+    const res = await fetch('https://ddragon.leagueoflegends.com/api/versions.json');
+    const versions = await res.json();
+    DDRAGON_VERSION = versions[0];
+    const parts = DDRAGON_VERSION.split('.');
+    CURRENT_PATCH = `26.${parts[1]}`;
+    document.getElementById('patchLabel').textContent = `PATCH ${CURRENT_PATCH}`;
+    document.getElementById('ls-patch').textContent = CURRENT_PATCH;
+  } catch(e) {
+    document.getElementById('patchLabel').textContent = 'PATCH 26.8';
+  }
+}
+fetchCurrentPatch();
+
+const PROFILE = {
+  summoner: "SIN LP CON RISAS #LPB",
+  server: "LAS", rank: "Gold 3 Flex", lp: "332 LP",
+  peakRank: "Emerald S14-1", role: "Jungla", wr: "51%", games: 359,
+  profileUrl: "https://u.gg/lol/profile/la2/sin%20lp%20con%20risas-lpb/overview",
+  bestPicks: [
+    { name:"Sylas",    wr:"65%", games:46, kda:"2.88", meta:"S" },
+    { name:"Vayne",    wr:"70%", games:20, kda:"2.79", meta:"A" },
+    { name:"Udyr",     wr:"71%", games:14, kda:"2.90", meta:"A" },
+    { name:"Elise",    wr:"63%", games:8,  kda:"3.03", meta:"A" },
+    { name:"Lux",      wr:"67%", games:6,  kda:"2.72", meta:"A" },
+    { name:"Volibear", wr:"50%", games:10, kda:"2.84", meta:"B" },
+    { name:"Caitlyn",  wr:"80%", games:5,  kda:"3.30", meta:"A" },
+    { name:"Thresh",   wr:"80%", games:5,  kda:"3.28", meta:"S" },
+    { name:"Bard",     wr:"80%", games:5,  kda:"3.33", meta:"A" },
+    { name:"Kha'Zix",  wr:"67%", games:3,  kda:"3.14", meta:"B" },
+    { name:"Yasuo",    wr:"46%", games:39, kda:"2.27", meta:"C" },
+    { name:"Ahri",     wr:"29%", games:7,  kda:"2.16", meta:"B" },
+    { name:"Lee Sin",  wr:"17%", games:6,  kda:"2.14", meta:"B" },
+  ],
+  avoid: ["Lee Sin","Ahri","Yasuo","Akali","Graves"]
+};
+
+let currentImage=null, selectedPhase="bans", sessionHistory=[], captureCount=0;
+
+const dragZone=document.getElementById('dragZone');
+const fileInput=document.getElementById('fileInput');
+const previewImg=document.getElementById('previewImg');
+const dragClear=document.getElementById('dragClear');
+const analyzeBtn=document.getElementById('analyzeBtn');
+
+['dragenter','dragover'].forEach(ev=>dragZone.addEventListener(ev,e=>{e.preventDefault();dragZone.classList.add('active-drag');}));
+['dragleave','dragend'].forEach(ev=>dragZone.addEventListener(ev,()=>dragZone.classList.remove('active-drag')));
+
+dragZone.addEventListener('drop',e=>{
+  e.preventDefault();dragZone.classList.remove('active-drag');
+  const f=e.dataTransfer.files[0];
+  if(f?.type.startsWith('image/'))loadImg(f);
+});
+
+dragZone.addEventListener('click',e=>{if(e.target!==dragClear)fileInput.click();});
+fileInput.addEventListener('change',()=>{if(fileInput.files[0])loadImg(fileInput.files[0]);});
+dragClear.addEventListener('click',e=>{e.stopPropagation();clearImg();});
+
+document.addEventListener('paste',e=>{
+  const items=e.clipboardData?.items;
+  if(!items)return;
+  for(const item of items){if(item.type.startsWith('image/')){loadImg(item.getAsFile());break;}}
+});
+
+function loadImg(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    currentImage=e.target.result;
+    previewImg.src=currentImage;previewImg.style.display='block';
+    dragZone.classList.add('has-image');
+    dragZone.querySelector('.drag-icon').style.display='none';
+    dragZone.querySelector('.drag-label').style.display='none';
+    dragZone.querySelector('.drag-hint').style.display='none';
+    dragClear.classList.add('visible');
+    analyzeBtn.disabled=false;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImg(){
+  currentImage=null;previewImg.src='';previewImg.style.display='none';
+  dragZone.classList.remove('has-image');
+  dragZone.querySelector('.drag-icon').style.display='';
+  dragZone.querySelector('.drag-label').style.display='';
+  dragZone.querySelector('.drag-hint').style.display='';
+  dragClear.classList.remove('visible');
+  analyzeBtn.disabled=true;fileInput.value='';
+}
+
+document.querySelectorAll('.ctx-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.ctx-btn').forEach(b=>b.classList.remove('sel'));
+    btn.classList.add('sel');selectedPhase=btn.dataset.phase;
+  });
+});
+
+analyzeBtn.addEventListener('click',runAnalysis);
+
+async function runAnalysis(){
+  if(!currentImage)return;
+  analyzeBtn.disabled=true;analyzeBtn.classList.add('loading');analyzeBtn.textContent='Analizando...';
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('analysisPanel').classList.remove('show');
+  document.getElementById('loadingPanel').classList.add('show');
+
+  let si=0;
+  const stepInt=setInterval(()=>{
+    if(si>0){document.getElementById(`ls-${si}`).classList.remove('active');document.getElementById(`ls-${si}`).classList.add('done');}
+    si++;if(si<=4)document.getElementById(`ls-${si}`).classList.add('active');
+  },900);
+
+  try{
+    const b64=currentImage.split(',')[1];
+    const mime=currentImage.split(';')[0].split(':')[1];
+
+    const hCtx=sessionHistory.length>0
+      ?`\n\nCONTEXTO ACUMULADO (${sessionHistory.length} capturas previas):\n`+
+        sessionHistory.map((h,i)=>`Captura ${i+1} (${h.phase}): ${h.summary}`).join('\n')
+      :'';
+
+    const sys=`Sos un experto en League of Legends especializado en jungla, draft y builds. Parche actual: ${CURRENT_PATCH} (ddragon: ${DDRAGON_VERSION}).
+
+IMPORTANTE: Todas tus recomendaciones de builds, runas y tier lists deben ser del parche ${CURRENT_PATCH}.
+
+PERFIL DEL JUGADOR:
+- Summoner: ${PROFILE.summoner} (${PROFILE.server})
+- Rango actual: ${PROFILE.rank} (${PROFILE.lp}) | Pico: ${PROFILE.peakRank}
+- Winrate: ${PROFILE.wr} en ${PROFILE.games} partidas (Flex S26)
+- Rol principal: ${PROFILE.role}
+
+PICKS PERSONALES (datos reales de u.gg S26):
+${PROFILE.bestPicks.map(p=>`- ${p.name}: ${p.wr} WR en ${p.games} partidas, KDA ${p.kda}, Meta ${p.meta} tier`).join('\n')}
+
+PICKS A EVITAR (bajo winrate): ${PROFILE.avoid.join(', ')}
+
+IDs de starter de jungla válidos: Scorchclaw Pup=7050, Gustwalker Hatchet=7051, Mosstomper Seedling=7052.
+
+Analizá la imagen del lobby de League of Legends y respondé ÚNICAMENTE con JSON válido, sin markdown ni texto extra:
+{
+  "equipoPropio":{"picks":[],"bans":[]},
+  "equipoEnemigo":{"picks":[],"bans":[]},
+  "recomendacion":{"pick":"","razon":"","alternativas":[],"alertas":[]},
+  "build":{
+    "campeon":"","starter":"nombre","starter_id":"7050/7051/7052",
+    "items":[],"items_ids":[],
+    "runas":{"keystone":"","arbol_primario":"","primarias":[],"arbol_secundario":"","secundarias":[]},
+    "orden_habilidades":"","nota":""
+  },
+  "matchups":{"amenazas":[{"campeon":"","nivel":"alto/medio/bajo","nota":""}],"objetivos_gank":[{"campeon":"","razon":""}],"ults_robables":[]},
+  "gameplan":"",
+  "alertas_generales":[]
+}`;
+
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': API_KEY,
+        'anthropic-version':'2023-06-01'
+      },
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',max_tokens:1000,system:sys,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:mime,data:b64}},
+          {type:'text',text:`Analizá este lobby. Momento del draft: ${selectedPhase}. Parche: ${CURRENT_PATCH}.${hCtx}\n\nRespondé solo con JSON.`}
+        ]}]
+      })
+    });
+
+    const data=await res.json();
+    const raw=data.content?.map(c=>c.text||'').join('').trim();
+
+    clearInterval(stepInt);
+    [1,2,3,4].forEach(i=>{document.getElementById(`ls-${i}`).classList.remove('active');document.getElementById(`ls-${i}`).classList.add('done');});
+
+    setTimeout(()=>{
+      document.getElementById('loadingPanel').classList.remove('show');
+      try{
+        const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+        renderAnalysis(parsed);addToSession(parsed);
+      }catch{renderRaw(raw);}
+      resetSteps();
+    },300);
+
+  }catch(err){
+    clearInterval(stepInt);
+    document.getElementById('loadingPanel').classList.remove('show');
+    renderErr(err.message);resetSteps();
+  }
+
+  analyzeBtn.disabled=false;analyzeBtn.classList.remove('loading');analyzeBtn.textContent='Analizar lobby';
+  clearImg();
+}
+
+function resetSteps(){[1,2,3,4].forEach(i=>{document.getElementById(`ls-${i}`).classList.remove('active','done');});}
+
+function renderAnalysis(d){
+  const panel=document.getElementById('analysisPanel');
+  panel.classList.add('show');
+  document.getElementById('analysisTitle').textContent=d.recomendacion?.pick?`→ ${d.recomendacion.pick}`:'Análisis del draft';
+  document.getElementById('analysisTime').textContent=`Patch ${CURRENT_PATCH} · ${new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}`;
+
+  let h='';
+
+  if(d.recomendacion){
+    const r=d.recomendacion;
+    h+=`<div>
+      <div class="block-title">Pick recomendado</div>
+      <div class="pick-rec">
+        <div>
+          <div class="rec-champion">${r.pick||'?'}</div>
+          <div class="rec-role">Jungla · Patch ${CURRENT_PATCH}</div>
+          ${r.alternativas?.length?`<div class="rec-alts">${r.alternativas.map(a=>`<div class="alt-chip">${a}</div>`).join('')}</div>`:''}
+        </div>
+        <div style="flex:1;">
+          <div class="rec-reason">${r.razon||''}</div>
+          ${d.gameplan?`<div class="rec-gameplan">${d.gameplan}</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  const al=[...(d.recomendacion?.alertas||[]),...(d.alertas_generales||[])];
+  if(al.length){
+    h+=`<div><div class="block-title">Alertas</div><div class="alerts-list">`;
+    al.forEach(a=>h+=`<div class="alert alert-warn"><span class="alert-icon">⚠</span>${a}</div>`);
+    h+=`</div></div>`;
+  }
+
+  if(d.equipoPropio||d.equipoEnemigo){
+    h+=`<div><div class="block-title">Draft actual</div><div class="draft-table">`;
+    if(d.equipoPropio){
+      h+=`<div class="draft-team dt-ally"><div class="dt-header">Tu equipo</div>`;
+      (d.equipoPropio.picks||[]).forEach(p=>h+=`<div class="dt-pick"><div class="dt-pick-dot dp-ally"></div>${p}</div>`);
+      if(d.equipoPropio.bans?.length){h+=`<div class="dt-bans-label">Bans</div>`;d.equipoPropio.bans.forEach(b=>h+=`<div class="dt-ban">${b}</div>`);}
+      h+=`</div>`;
+    }
+    if(d.equipoEnemigo){
+      h+=`<div class="draft-team dt-enemy"><div class="dt-header">Enemigos</div>`;
+      (d.equipoEnemigo.picks||[]).forEach(p=>h+=`<div class="dt-pick"><div class="dt-pick-dot dp-enemy"></div>${p}</div>`);
+      if(d.equipoEnemigo.bans?.length){h+=`<div class="dt-bans-label">Bans</div>`;d.equipoEnemigo.bans.forEach(b=>h+=`<div class="dt-ban">${b}</div>`);}
+      h+=`</div>`;
+    }
+    h+=`</div></div>`;
+  }
+
+  if(d.build){
+    const b=d.build;
+    h+=`<div><div class="block-title">Build — ${b.campeon||d.recomendacion?.pick||''} · Patch ${CURRENT_PATCH}</div><div class="build-items">`;
+    if(b.starter){
+      const sid=b.starter_id||'7050';
+      h+=`<div class="b-item"><img src="https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/item/${sid}.png" alt="${b.starter}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="b-item-ph" style="display:none;">🌱</div><div class="b-item-num">Starter</div><div class="b-item-name">${b.starter}</div></div>`;
+    }
+    const ids=b.items_ids||[];
+    (b.items||[]).forEach((name,i)=>{
+      const id=ids[i];
+      if(id){
+        h+=`<div class="b-item"><img src="https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/item/${id}.png" alt="${name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="b-item-ph" style="display:none;">🔮</div><div class="b-item-num">${i+1}</div><div class="b-item-name">${name}</div></div>`;
+      }else{
+        h+=`<div class="b-item"><div class="b-item-ph">🔮</div><div class="b-item-num">${i+1}</div><div class="b-item-name">${name}</div></div>`;
+      }
+    });
+    h+=`</div>`;
+    if(b.nota)h+=`<div class="alert alert-good" style="margin-bottom:12px;"><span class="alert-icon">💡</span>${b.nota}</div>`;
+    if(b.runas){
+      h+=`<div class="runes-grid">
+        <div class="rune-block"><div class="rb-title">${b.runas.arbol_primario||'Primario'}</div><div class="rune-keystone">${b.runas.keystone||''}</div>${(b.runas.primarias||[]).map(r=>`<div class="rune-entry"><div class="re-dot"></div>${r}</div>`).join('')}</div>
+        <div class="rune-block"><div class="rb-title">${b.runas.arbol_secundario||'Secundario'}</div>${(b.runas.secundarias||[]).map(r=>`<div class="rune-entry"><div class="re-dot"></div>${r}</div>`).join('')}</div>
+      </div>`;
+    }
+    if(b.orden_habilidades)h+=`<div class="skill-order">${b.orden_habilidades}</div><div class="skill-note">Orden de habilidades · Patch ${CURRENT_PATCH}</div>`;
+    h+=`</div>`;
+  }
+
+  if(d.matchups){
+    h+=`<div><div class="block-title">Matchups & Objetivos</div><div class="matchup-list">`;
+    (d.matchups.amenazas||[]).forEach(a=>{
+      const c=a.nivel==='alto'?'mu-high':a.nivel==='bajo'?'mu-low':'mu-mid';
+      const t=a.nivel==='alto'?'tag-high':a.nivel==='bajo'?'tag-low':'tag-mid';
+      const l=a.nivel==='alto'?'Alta amenaza':a.nivel==='bajo'?'Amenaza baja':'Amenaza media';
+      h+=`<div class="mu-item ${c}"><div class="mu-name">${a.campeon}</div><div class="mu-note">${a.nota}</div><div class="mu-tag ${t}">${l}</div></div>`;
+    });
+    (d.matchups.objetivos_gank||[]).forEach(g=>{
+      h+=`<div class="mu-item mu-gank"><div class="mu-name">${g.campeon}</div><div class="mu-note">${g.razon}</div><div class="mu-tag tag-gank">Gank prio</div></div>`;
+    });
+    (d.matchups.ults_robables||[]).forEach(u=>{
+      const n=typeof u==='string'?u:u.campeon;
+      const nt=typeof u==='object'?(u.nota||''):'';
+      h+=`<div class="mu-item mu-ult"><div class="mu-name">${n}</div><div class="mu-note">${nt}</div><div class="mu-tag tag-ult">Ult robable</div></div>`;
+    });
+    h+=`</div></div>`;
+  }
+
+  document.getElementById('fullAnalysis').innerHTML=h;
+}
+
+function renderRaw(t){
+  document.getElementById('analysisPanel').classList.add('show');
+  document.getElementById('fullAnalysis').innerHTML=`<div class="alert alert-warn"><span class="alert-icon">⚠</span>No se pudo parsear la respuesta.</div><pre style="font-size:11px;color:var(--text-secondary);white-space:pre-wrap;padding:10px;background:var(--bg-card);margin-top:10px;">${t}</pre>`;
+}
+
+function renderErr(msg){
+  document.getElementById('analysisPanel').classList.add('show');
+  document.getElementById('fullAnalysis').innerHTML=`<div class="alert alert-danger"><span class="alert-icon">✕</span>Error: ${msg}. Verificá que tu API key sea válida.</div>`;
+}
+
+function addToSession(d){
+  captureCount++;
+  const pick=d.recomendacion?.pick||'?';
+  const enemies=d.equipoEnemigo?.picks?.join(', ')||'por confirmar';
+  const summary=`Pick rec: ${pick} · Enemigos: ${enemies}`;
+  const time=new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
+  sessionHistory.push({phase:selectedPhase,summary,data:d,time});
+
+  document.getElementById('sessionCount').textContent=`${captureCount} captura${captureCount!==1?'s':''} esta sesión`;
+
+  if(sessionHistory.length>1){
+    document.getElementById('ctxAccum').classList.add('show');
+    document.getElementById('ctxCount').textContent=`${sessionHistory.length-1} prev`;
+    document.getElementById('ctxText').textContent=`Contexto acumulado: ${sessionHistory.slice(0,-1).map(h=>h.summary.split('·')[0].trim()).join(' → ')}`;
+  }
+
+  document.getElementById('timelineWrap').style.display='block';
+  const tl=document.getElementById('timelineItems');
+  const pc={bans:'tl-ban',picks:'tl-pick','mi-pick':'tl-pick',completo:'tl-build'};
+  const el=document.createElement('div');
+  el.className='tl-item current';
+  el.innerHTML=`<div class="tl-dot ${pc[selectedPhase]||'tl-pick'}"></div><span class="tl-text">${summary}</span><span class="tl-time">${time}</span>`;
+  el.addEventListener('click',()=>renderAnalysis(d));
+  tl.querySelectorAll('.tl-item').forEach(i=>i.classList.remove('current'));
+  tl.insertBefore(el,tl.firstChild);
+
+  const pm={bans:1,picks:2,'mi-pick':3,completo:4};
+  const cur=pm[selectedPhase]||1;
+  [1,2,3,4,5].forEach(i=>{
+    const ps=document.getElementById(`ps-${i}`);
+    ps.classList.remove('active','done');
+    if(i<cur)ps.classList.add('done');
+    else if(i===cur)ps.classList.add('active');
+  });
+}
+</script>
+</body>
+</html>
