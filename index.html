@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>League Of Draft</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold:#C89B3C;--gold-bright:#F0E6B2;--gold-dim:#785A28;--gold-dark:#3C2A0A;
+    --bg-deep:#020C18;--bg-panel:#0A1929;--bg-card:#0F2238;
+    --border:#1A3A5C;--border-bright:#2A5A8C;--border-gold:#5C3D0A;--border-gold-bright:#8B6914;
+    --text-primary:#F0E6B2;--text-secondary:#A89060;--text-muted:#4A3A20;
+    --blue:#0BC4E3;--red:#E84057;--green:#0ACF83;--purple:#9B5DE5;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:var(--bg-deep);color:var(--text-primary);min-height:100vh;}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -5%,rgba(200,155,60,.12) 0%,transparent 60%),radial-gradient(ellipse 40% 40% at 90% 90%,rgba(11,196,227,.06) 0%,transparent 50%);pointer-events:none;z-index:0;}
+  .app{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:0 24px 80px;}
+
+  header{display:flex;align-items:center;justify-content:space-between;padding:28px 0 22px;border-bottom:1px solid var(--border-gold-bright);margin-bottom:24px;position:relative;}
+  header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5;}
+
+  .logo{display:flex;align-items:center;gap:16px;}
+  .logo-emblem{width:48px;height:48px;position:relative;display:flex;align-items:center;justify-content:center;}
+  .logo-emblem::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--gold-dark),var(--gold-dim));clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);}
+  .logo-emblem-inner{position:relative;z-index:1;font-size:20px;filter:drop-shadow(0 0 4px rgba(200,155,60,.8));}
+  .logo-name{font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;letter-spacing:4px;text-transform:uppercase;background:linear-gradient(135deg,var(--gold-bright),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .logo-sub{font-size:10px;color:var(--text-secondary);letter-spacing:4px;text-transform:uppercase;}
+  .header-right{display:flex;align-items:center;gap:12px;}
+  .patch-badge{display:flex;align-items:center;gap:7px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--blue);border:1px solid rgba(11,196,227,.3);background:rgba(11,196,227,.05);padding:6px 14px;letter-spacing:1.5px;}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse-dot 2s infinite;}
+  @keyframes pulse-dot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(10,207,131,.4)}50%{opacity:.7;box-shadow:0 0 0 4px rgba(10,207,131,0)}}
+  .session-info{font-size:11px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;}
+
+  .phase-bar{display:flex;margin-bottom:24px;border:1px solid var(--border-gold);background:var(--bg-panel);overflow:hidden;box-shadow:0 0 20px rgba(200,155,60,.1);}
+  .phase-step{flex:1;padding:10px 4px;text-align:center;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);border-right:1px solid var(--border);transition:all .3s;position:relative;}
+  .phase-step:last-child{border-right:none;}
+  .phase-step.active{background:linear-gradient(180deg,rgba(200,155,60,.15),rgba(200,155,60,.05));color:var(--gold-bright);}
+  .phase-step.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+  .phase-step.done{background:rgba(10,207,131,.06);color:var(--green);}
+
+  .layout{display:grid;grid-template-columns:380px 1fr;gap:20px;align-items:start;}
+  .left-panel{display:flex;flex-direction:column;gap:14px;}
+
+  .panel{background:var(--bg-panel);border:1px solid var(--border-gold);box-shadow:0 0 20px rgba(200,155,60,.1);position:relative;overflow:hidden;}
+  .panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold-dim),transparent);}
+  .panel-header{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(200,155,60,.03);}
+  .panel-title{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);}
+  .panel-sub{font-size:10px;color:var(--text-muted);letter-spacing:1px;}
+
+  .drag-zone{margin:16px;border:2px dashed var(--border-gold);min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;transition:all .25s;position:relative;padding:24px;background:rgba(200,155,60,.02);}
+  .drag-zone:hover,.drag-zone.active-drag{border-color:var(--gold);border-style:solid;background:rgba(200,155,60,.06);}
+  .drag-zone.has-image{border-style:solid;border-color:var(--gold-dim);padding:8px;min-height:auto;}
+  .dz-icon{font-size:36px;opacity:.35;transition:all .25s;}
+  .drag-zone:hover .dz-icon,.drag-zone.active-drag .dz-icon{opacity:.7;transform:scale(1.05);}
+  .dz-label{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:600;letter-spacing:1px;color:var(--text-secondary);text-align:center;}
+  .dz-hint{font-size:10px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;}
+  #previewImg{width:100%;max-height:280px;object-fit:contain;display:none;}
+  #fileInput{display:none;}
+  .dz-clear{position:absolute;top:8px;right:8px;width:24px;height:24px;background:rgba(232,64,87,.25);border:1px solid var(--red);color:var(--red);font-size:13px;cursor:pointer;display:none;align-items:center;justify-content:center;transition:all .15s;}
+  .dz-clear:hover{background:rgba(232,64,87,.4);}
+  .dz-clear.visible{display:flex;}
+
+  .context-row{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:rgba(0,0,0,.2);}
+  .ctx-label{font-size:10px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-right:4px;}
+  .ctx-btn{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;padding:5px 12px;border:1px solid var(--border-bright);background:transparent;color:var(--text-muted);cursor:pointer;transition:all .15s;text-transform:uppercase;}
+  .ctx-btn:hover{border-color:var(--gold-dim);color:var(--text-secondary);}
+  .ctx-btn.sel{border-color:var(--gold);color:var(--gold-bright);background:rgba(200,155,60,.1);}
+
+  .analyze-wrap{padding:0 16px 16px;}
+  .analyze-btn{width:100%;padding:14px;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:4px;text-transform:uppercase;background:linear-gradient(135deg,#5C3D0A,var(--gold),#5C3D0A);background-size:200% 100%;background-position:100% 0;color:var(--bg-deep);border:1px solid var(--gold);cursor:pointer;transition:all .3s;clip-path:polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);}
+  .analyze-btn:hover:not(:disabled){background-position:0% 0;box-shadow:0 0 20px rgba(200,155,60,.3);}
+  .analyze-btn:disabled{background:var(--bg-card);color:var(--text-muted);border-color:var(--border);cursor:not-allowed;clip-path:none;box-shadow:none;}
+  .analyze-btn.loading{background:rgba(200,155,60,.1);color:var(--gold);border:1px solid var(--gold-dim);clip-path:none;animation:glow-pulse 1.5s infinite;}
+  @keyframes glow-pulse{0%,100%{box-shadow:0 0 10px rgba(200,155,60,.1)}50%{box-shadow:0 0 20px rgba(200,155,60,.3)}}
+
+  .timeline{padding:10px 16px 14px;border-top:1px solid var(--border);}
+  .tl-title{font-size:9px;color:var(--text-muted);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:8px;}
+  .tl-items{display:flex;flex-direction:column;gap:3px;max-height:140px;overflow-y:auto;}
+  .tl-item{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg-card);cursor:pointer;transition:all .15s;border-left:2px solid transparent;}
+  .tl-item:hover{background:rgba(200,155,60,.06);border-left-color:var(--gold-dim);}
+  .tl-item.current{border-left-color:var(--gold);}
+  .tl-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+  .dot-ban{background:var(--red);}.dot-pick{background:var(--green);}.dot-build{background:var(--purple);}
+  .tl-text{font-size:11px;color:var(--text-secondary);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+  .tl-time{font-size:10px;color:var(--text-muted);}
+
+  .profile-body{padding:14px 18px;}
+  .profile-top{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+  .profile-avatar{width:44px;height:44px;border-radius:50%;border:2px solid var(--gold-dim);background:var(--bg-card);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;box-shadow:0 0 12px rgba(200,155,60,.2);}
+  .profile-name{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--gold-bright);letter-spacing:1px;}
+  .profile-tag{font-size:12px;color:var(--text-muted);}
+  .profile-sub{font-size:11px;color:var(--text-secondary);margin-top:2px;}
+  .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+  .stat-box{background:var(--bg-card);border:1px solid var(--border-bright);padding:8px 10px;text-align:center;position:relative;overflow:hidden;}
+  .stat-box::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--border-bright),transparent);}
+  .stat-l{font-size:9px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px;}
+  .stat-v{font-family:'Rajdhani',sans-serif;font-size:19px;font-weight:700;color:var(--gold-bright);line-height:1;}
+  .stat-s{font-size:10px;color:var(--text-secondary);margin-top:2px;}
+
+  .picks-body{padding:8px 14px 14px;}
+  .pick-item{display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--bg-card);border-left:3px solid transparent;margin-bottom:4px;transition:all .15s;border:1px solid transparent;border-left-width:3px;}
+  .pick-item:hover{background:rgba(200,155,60,.06);border-color:var(--border-gold);}
+  .pick-s{border-left-color:var(--purple)!important;}.pick-a{border-left-color:var(--green)!important;}.pick-b{border-left-color:var(--gold-dim)!important;}.pick-c{border-left-color:var(--red)!important;}
+  .pick-avatar{width:32px;height:32px;border-radius:50%;border:1px solid var(--border-gold);object-fit:cover;flex-shrink:0;background:var(--bg-card);}
+  .pi-name{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;color:var(--text-primary);flex:1;}
+  .pi-tier{font-size:9px;font-weight:700;padding:2px 6px;}
+  .t-s{background:rgba(155,93,229,.25);color:#C49DFF;border:1px solid rgba(155,93,229,.4);}
+  .t-a{background:rgba(10,207,131,.2);color:#5DFFB8;border:1px solid rgba(10,207,131,.3);}
+  .t-b{background:rgba(200,155,60,.2);color:var(--gold);border:1px solid rgba(200,155,60,.3);}
+  .t-c{background:rgba(232,64,87,.2);color:#FF8095;border:1px solid rgba(232,64,87,.3);}
+  .pi-wr{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;min-width:38px;text-align:right;}
+  .wr-g{color:var(--green);}.wr-y{color:var(--gold);}.wr-r{color:var(--red);}
+  .pi-g{font-size:10px;color:var(--text-muted);min-width:50px;text-align:right;}
+
+  .right-panel{display:flex;flex-direction:column;gap:14px;}
+  .ctx-accum{background:var(--bg-panel);border:1px solid var(--border-gold);padding:10px 18px;display:none;align-items:center;gap:12px;}
+  .ctx-accum.show{display:flex;}
+  .ctx-text{font-size:11px;color:var(--text-secondary);line-height:1.5;flex:1;}
+  .ctx-count{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;color:var(--gold-bright);border:1px solid var(--border-gold-bright);padding:3px 10px;background:rgba(200,155,60,.08);}
+
+  .empty-state{background:var(--bg-panel);border:1px solid var(--border-gold);padding:70px 30px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;}
+  .empty-icon{font-size:48px;opacity:.15;}
+  .empty-title{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text-muted);}
+  .empty-sub{font-size:12px;color:var(--text-muted);line-height:1.8;max-width:340px;}
+
+  .loading-panel{background:var(--bg-panel);border:1px solid var(--border-gold);padding:60px;text-align:center;display:none;flex-direction:column;align-items:center;gap:20px;}
+  .loading-panel.show{display:flex;}
+  .spinner-wrap{position:relative;width:50px;height:50px;}
+  .spinner{width:50px;height:50px;border-radius:50%;border:2px solid var(--border-gold);border-top-color:var(--gold);animation:spin .8s linear infinite;}
+  .spinner-inner{position:absolute;inset:8px;border-radius:50%;border:1px solid var(--border-gold-bright);border-bottom-color:var(--gold-bright);animation:spin .6s linear infinite reverse;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-msg{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--gold);}
+  .loading-steps{display:flex;flex-direction:column;gap:6px;margin-top:4px;}
+  .loading-step{font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:8px;justify-content:center;transition:color .3s;}
+  .loading-step.active{color:var(--gold-bright);}.loading-step.done{color:var(--green);}
+  .ls-dot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+
+  .analysis-panel{background:var(--bg-panel);border:1px solid var(--border-gold);display:none;position:relative;overflow:hidden;}
+  .analysis-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+  .analysis-panel.show{display:block;}
+  .full-analysis{padding:24px;display:flex;flex-direction:column;gap:24px;}
+
+  .block-title{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+  .block-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border-gold),transparent);}
+
+  .pick-rec{background:linear-gradient(135deg,rgba(200,155,60,.08),rgba(200,155,60,.03));border:1px solid var(--border-gold-bright);padding:20px 24px;display:flex;align-items:flex-start;gap:20px;position:relative;}
+  .pick-rec::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--gold-bright),var(--gold-dim));}
+  .rec-left{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px;}
+  .rec-champ-img{width:80px;height:80px;border-radius:50%;border:3px solid var(--gold-dim);object-fit:cover;box-shadow:0 0 20px rgba(200,155,60,.3);background:var(--bg-card);}
+  .rec-champion{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:var(--gold-bright);letter-spacing:2px;text-align:center;}
+  .rec-role{font-size:10px;color:var(--text-secondary);letter-spacing:2px;text-transform:uppercase;text-align:center;}
+  .rec-alts{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;justify-content:center;}
+  .alt-chip{display:flex;align-items:center;gap:5px;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;padding:3px 8px;border:1px solid var(--border-bright);color:var(--text-secondary);background:var(--bg-card);}
+  .alt-img{width:18px;height:18px;border-radius:50%;object-fit:cover;background:var(--bg-card);}
+  .rec-right{flex:1;}
+  .rec-reason{font-size:13px;color:var(--text-secondary);line-height:1.8;margin-bottom:12px;}
+  .rec-gameplan{font-size:12px;color:var(--text-muted);line-height:1.7;padding:12px 14px;background:rgba(0,0,0,.3);border:1px solid var(--border);}
+
+  .alerts-list{display:flex;flex-direction:column;gap:6px;}
+  .alert{padding:10px 14px;font-size:12px;line-height:1.7;border-left:3px solid;display:flex;align-items:flex-start;gap:10px;}
+  .alert-icon{flex-shrink:0;font-size:14px;}
+  .alert-warn{border-color:var(--gold);background:rgba(200,155,60,.08);color:var(--text-secondary);}
+  .alert-good{border-color:var(--green);background:rgba(10,207,131,.08);color:#7DCEA0;}
+  .alert-danger{border-color:var(--red);background:rgba(232,64,87,.08);color:#FF9090;}
+
+  .draft-table{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .draft-team{background:var(--bg-card);border:1px solid var(--border-bright);padding:12px 14px;}
+  .dt-header{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;}
+  .dt-ally .dt-header{color:var(--green);}.dt-enemy .dt-header{color:var(--red);}
+  .dt-header-dot{width:6px;height:6px;border-radius:50%;}
+  .dt-pick{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;color:var(--text-primary);}
+  .dt-champ-img{width:24px;height:24px;border-radius:50%;object-fit:cover;border:1px solid var(--border-gold);background:var(--bg-card);}
+  .dt-bans-label{font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin:8px 0 4px;}
+  .dt-ban{font-size:11px;color:var(--text-muted);text-decoration:line-through;padding:2px 0;display:flex;align-items:center;gap:6px;}
+  .dt-ban-img{width:18px;height:18px;border-radius:50%;object-fit:cover;opacity:.4;background:var(--bg-card);}
+
+  .build-items{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  .b-item{background:var(--bg-card);border:1px solid var(--border-bright);padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:72px;max-width:84px;transition:all .2s;position:relative;}
+  .b-item:hover{border-color:var(--border-gold-bright);box-shadow:0 0 12px rgba(200,155,60,.15);}
+  .b-starter{border-color:var(--border-gold-bright);background:rgba(200,155,60,.05);}
+  .b-starter::before{content:'START';position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:7px;font-weight:700;letter-spacing:1px;color:var(--gold-dim);background:var(--bg-deep);padding:0 4px;}
+  .b-item img{width:48px;height:48px;border-radius:6px;border:1px solid var(--border-gold);object-fit:cover;background:var(--bg-card);}
+  .b-item-ph{width:48px;height:48px;border-radius:6px;border:1px solid var(--border-gold);background:var(--bg-panel);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--gold-dim);}
+  .b-item-name{font-size:9px;color:var(--text-secondary);text-align:center;line-height:1.3;font-weight:500;}
+  .b-item-num{font-size:8px;color:var(--text-muted);font-weight:700;letter-spacing:1px;}
+
+  .runes-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+  .rune-block{background:var(--bg-card);border:1px solid var(--border-bright);padding:12px 14px;}
+  .rb-title{font-size:9px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+  .rune-keystone{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;color:var(--gold-bright);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+  .rune-entry{font-size:12px;color:var(--text-secondary);padding:3px 0;display:flex;align-items:center;gap:6px;}
+  .re-dot{width:4px;height:4px;border-radius:50%;background:var(--gold-dim);flex-shrink:0;}
+  .skill-order{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:var(--text-primary);letter-spacing:3px;padding:12px 0 4px;border-top:1px solid var(--border);margin-top:10px;}
+  .skill-note{font-size:11px;color:var(--text-muted);margin-top:4px;}
+
+  .matchup-list{display:flex;flex-direction:column;gap:6px;}
+  .mu-item{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg-card);border:1px solid var(--border);border-left-width:3px;border-left-color:transparent;transition:all .15s;}
+  .mu-item:hover{background:rgba(200,155,60,.04);}
+  .mu-high{border-left-color:var(--red)!important;background:rgba(232,64,87,.04)!important;}
+  .mu-mid{border-left-color:var(--gold)!important;}
+  .mu-low{border-left-color:var(--green)!important;}
+  .mu-gank{border-left-color:var(--blue)!important;background:rgba(11,196,227,.03)!important;}
+  .mu-ult{border-left-color:var(--purple)!important;background:rgba(155,93,229,.04)!important;}
+  .mu-champ-img{width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--border-gold);flex-shrink:0;background:var(--bg-card);}
+  .mu-info{flex:1;}
+  .mu-name{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--text-primary);}
+  .mu-note{font-size:11px;color:var(--text-secondary);line-height:1.5;margin-top:2px;}
+  .mu-tag{font-size:9px;font-weight:700;padding:3px 8px;letter-spacing:.5px;white-space:nowrap;flex-shrink:0;border:1px solid;}
+  .tag-high{background:rgba(232,64,87,.15);color:#FF8095;border-color:rgba(232,64,87,.3);}
+  .tag-mid{background:rgba(200,155,60,.15);color:var(--gold);border-color:rgba(200,155,60,.3);}
+  .tag-low{background:rgba(10,207,131,.15);color:var(--green);border-color:rgba(10,207,131,.3);}
+  .tag-gank{background:rgba(11,196,227,.15);color:var(--blue);border-color:rgba(11,196,227,.3);}
+  .tag-ult{background:rgba(155,93,229,.2);color:#C49DFF;border-color:rgba(155,93,229,.3);}
+
+  ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border-gold-bright);}
+  @media(max-width:960px){.layout{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="logo">
+      <div class="logo-emblem"><div class="logo-emblem-inner">⚔</div></div>
+      <div>
+        <div class="logo-name">League Of Draft</div>
+        <div class="logo-sub">Asistente inteligente de jungla</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="session-info" id="sessionCount">0 capturas</span>
+      <div class="patch-badge"><div class="live-dot"></div><span id="patchLabel">Cargando...</span></div>
+    </div>
+  </header>
+
+  <div class="phase-bar">
+    <div class="phase-step active" id="ps-1">01 · Bans</div>
+    <div class="phase-step" id="ps-2">02 · Picks</div>
+    <div class="phase-step" id="ps-3">03 · Mi pick</div>
+    <div class="phase-step" id="ps-4">04 · Build</div>
+    <div class="phase-step" id="ps-5">05 · In-game</div>
+  </div>
+
+  <div class="layout">
+    <div class="left-panel">
+
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Captura del lobby</span><span class="panel-sub">Arrastrá · Ctrl+V · Clic</span></div>
+        <div class="drag-zone" id="dragZone">
+          <input type="file" id="fileInput" accept="image/*">
+          <div class="dz-icon">🎮</div>
+          <div class="dz-label">Arrastrá la captura aquí</div>
+          <div class="dz-hint">Win+Shift+S → Ctrl+V</div>
+          <img id="previewImg" alt=""/>
+          <div class="dz-clear" id="dzClear">✕</div>
+        </div>
+        <div class="context-row">
+          <span class="ctx-label">Momento:</span>
+          <button class="ctx-btn sel" data-phase="bans">Bans</button>
+          <button class="ctx-btn" data-phase="picks">Picks</button>
+          <button class="ctx-btn" data-phase="mi-pick">Mi pick</button>
+          <button class="ctx-btn" data-phase="completo">Completo</button>
+        </div>
+        <div class="analyze-wrap">
+          <button class="analyze-btn" id="analyzeBtn" disabled>⚔ Analizar lobby</button>
+        </div>
+        <div id="tlWrap" style="display:none;">
+          <div class="timeline">
+            <div class="tl-title">Historial de esta sesión</div>
+            <div class="tl-items" id="tlItems"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Perfil</span><span class="panel-sub">LAS · Flex S26</span></div>
+        <div class="profile-body">
+          <div class="profile-top">
+            <div class="profile-avatar">🎯</div>
+            <div>
+              <div class="profile-name">SIN LP CON RISAS</div>
+              <div class="profile-tag">#LPB · LAS</div>
+              <div class="profile-sub">Jungla · Pico Emerald S14</div>
+            </div>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-box"><div class="stat-l">Rango</div><div class="stat-v" style="font-size:14px;">Gold 3</div><div class="stat-s">332 LP</div></div>
+            <div class="stat-box"><div class="stat-l">Winrate</div><div class="stat-v">51%</div><div class="stat-s">184W·175L</div></div>
+            <div class="stat-box"><div class="stat-l">Partidas</div><div class="stat-v">359</div><div class="stat-s">Flex S26</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Pool de jungla</span><span class="panel-sub">WR personal · Meta S26</span></div>
+        <div class="picks-body" id="picksList"></div>
+      </div>
+
+    </div>
+
+    <div class="right-panel">
+      <div class="ctx-accum" id="ctxAccum">
+        <span style="font-size:16px;">🧠</span>
+        <span class="ctx-text" id="ctxText">Contexto acumulado de capturas anteriores.</span>
+        <span class="ctx-count" id="ctxCount">0</span>
+      </div>
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">⚔</div>
+        <div class="empty-title">League Of Draft</div>
+        <div class="empty-sub">Arrastrá una captura del lobby a la izquierda. Mandá varias capturas durante el draft — la app acumula el contexto automáticamente para un análisis cada vez más preciso.</div>
+      </div>
+      <div class="loading-panel" id="loadingPanel">
+        <div class="spinner-wrap"><div class="spinner"></div><div class="spinner-inner"></div></div>
+        <div class="loading-msg">Analizando lobby</div>
+        <div class="loading-steps">
+          <div class="loading-step" id="ls-1"><div class="ls-dot"></div>Leyendo picks y bans</div>
+          <div class="loading-step" id="ls-2"><div class="ls-dot"></div>Consultando meta Patch <span id="ls-patch">actual</span></div>
+          <div class="loading-step" id="ls-3"><div class="ls-dot"></div>Cruzando con historial personal</div>
+          <div class="loading-step" id="ls-4"><div class="ls-dot"></div>Generando recomendación y build</div>
+        </div>
+      </div>
+      <div class="analysis-panel" id="analysisPanel">
+        <div class="panel-header">
+          <span class="panel-title" id="analysisTitle">Análisis del draft</span>
+          <span class="panel-sub" id="analysisTime"></span>
+        </div>
+        <div class="full-analysis" id="fullAnalysis"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_KEY='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';
+let PATCH='26.8',DDV='16.8.1';
+
+async function loadPatch(){
+  try{
+    const r=await fetch('https://ddragon.leagueoflegends.com/api/versions.json');
+    const v=await r.json();DDV=v[0];
+    const p=DDV.split('.');PATCH=`26.${p[1]}`;
+    document.getElementById('patchLabel').textContent=`PATCH ${PATCH}`;
+    document.getElementById('ls-patch').textContent=PATCH;
+    renderPicksList();
+  }catch{document.getElementById('patchLabel').textContent='PATCH 26.8';}
+}
+loadPatch();
+
+function champImg(name){
+  if(!name)return'';
+  const map={'Nunu & Willump':'NunuWillump','Wukong':'MonkeyKing','Renata Glasc':'Renata','K\'Sante':'KSante','Kog\'Maw':'KogMaw','Cho\'Gath':'Chogath','Kha\'Zix':'Khazix','Vel\'Koz':'Velkoz','Rek\'Sai':'RekSai','Bel\'Veth':'Belveth',"Kai'Sa":'Kaisa',"Kog'Maw":'KogMaw'};
+  const key=map[name]||(name.replace(/['\s.&]/g,'').replace(/^(.)/,c=>c.toUpperCase()));
+  return`https://ddragon.leagueoflegends.com/cdn/${DDV}/img/champion/${key}.png`;
+}
+
+function itemImg(id){return id?`https://ddragon.leagueoflegends.com/cdn/${DDV}/img/item/${id}.png`:'';}
+
+const PROFILE={
+  bestPicks:[
+    {name:'Sylas',wr:'65%',games:46,kda:'2.88',meta:'S'},
+    {name:'Vayne',wr:'70%',games:20,kda:'2.79',meta:'A'},
+    {name:'Udyr',wr:'71%',games:14,kda:'2.90',meta:'A'},
+    {name:'Elise',wr:'63%',games:8,kda:'3.03',meta:'A'},
+    {name:'Lux',wr:'67%',games:6,kda:'2.72',meta:'A'},
+    {name:'Volibear',wr:'50%',games:10,kda:'2.84',meta:'B'},
+    {name:'Caitlyn',wr:'80%',games:5,kda:'3.30',meta:'A'},
+    {name:'Thresh',wr:'80%',games:5,kda:'3.28',meta:'S'},
+    {name:'Bard',wr:'80%',games:5,kda:'3.33',meta:'A'},
+    {name:"Kha'Zix",wr:'67%',games:3,kda:'3.14',meta:'B'},
+    {name:'Yasuo',wr:'46%',games:39,kda:'2.27',meta:'C'},
+    {name:'Ahri',wr:'29%',games:7,kda:'2.16',meta:'B'},
+    {name:'Lee Sin',wr:'17%',games:6,kda:'2.14',meta:'B'},
+  ],
+  avoid:['Lee Sin','Ahri','Yasuo','Graves']
+};
+
+function renderPicksList(){
+  const wr=w=>parseFloat(w)>=65?'wr-g':parseFloat(w)>=50?'wr-y':'wr-r';
+  document.getElementById('picksList').innerHTML=PROFILE.bestPicks.map(p=>`
+    <div class="pick-item pick-${p.meta.toLowerCase()}">
+      <img src="${champImg(p.name)}" alt="${p.name}" class="pick-avatar" onerror="this.style.display='none'"/>
+      <span class="pi-name">${p.name}</span>
+      <span class="pi-tier t-${p.meta.toLowerCase()}">${p.meta}</span>
+      <span class="pi-wr ${wr(p.wr)}">${p.wr}</span>
+      <span class="pi-g">${p.games}g</span>
+    </div>`).join('');
+}
+renderPicksList();
+
+let currentImage=null,selectedPhase='bans',sessionHistory=[],captureCount=0;
+const dragZone=document.getElementById('dragZone');
+const fileInput=document.getElementById('fileInput');
+const previewImg=document.getElementById('previewImg');
+const dzClear=document.getElementById('dzClear');
+const analyzeBtn=document.getElementById('analyzeBtn');
+
+['dragenter','dragover'].forEach(ev=>dragZone.addEventListener(ev,e=>{e.preventDefault();dragZone.classList.add('active-drag');}));
+['dragleave','dragend'].forEach(ev=>dragZone.addEventListener(ev,()=>dragZone.classList.remove('active-drag')));
+dragZone.addEventListener('drop',e=>{e.preventDefault();dragZone.classList.remove('active-drag');const f=e.dataTransfer.files[0];if(f?.type.startsWith('image/'))loadImg(f);});
+dragZone.addEventListener('click',e=>{if(e.target!==dzClear)fileInput.click();});
+fileInput.addEventListener('change',()=>{if(fileInput.files[0])loadImg(fileInput.files[0]);});
+dzClear.addEventListener('click',e=>{e.stopPropagation();clearImg();});
+document.addEventListener('paste',e=>{const items=e.clipboardData?.items;if(!items)return;for(const item of items){if(item.type.startsWith('image/')){loadImg(item.getAsFile());break;}}});
+
+function loadImg(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    currentImage=e.target.result;previewImg.src=currentImage;previewImg.style.display='block';
+    dragZone.classList.add('has-image');
+    ['dz-icon','dz-label','dz-hint'].forEach(c=>{const el=dragZone.querySelector('.'+c);if(el)el.style.display='none';});
+    dzClear.classList.add('visible');analyzeBtn.disabled=false;
+  };reader.readAsDataURL(file);
+}
+
+function clearImg(){
+  currentImage=null;previewImg.src='';previewImg.style.display='none';
+  dragZone.classList.remove('has-image');
+  ['dz-icon','dz-label','dz-hint'].forEach(c=>{const el=dragZone.querySelector('.'+c);if(el)el.style.display='';});
+  dzClear.classList.remove('visible');analyzeBtn.disabled=true;fileInput.value='';
+}
+
+document.querySelectorAll('.ctx-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{document.querySelectorAll('.ctx-btn').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');selectedPhase=btn.dataset.phase;});
+});
+
+analyzeBtn.addEventListener('click',runAnalysis);
+
+async function runAnalysis(){
+  if(!currentImage)return;
+  analyzeBtn.disabled=true;analyzeBtn.classList.add('loading');analyzeBtn.textContent='Analizando...';
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('analysisPanel').classList.remove('show');
+  document.getElementById('loadingPanel').classList.add('show');
+  let si=0;
+  const stepInt=setInterval(()=>{if(si>0){document.getElementById(`ls-${si}`).classList.remove('active');document.getElementById(`ls-${si}`).classList.add('done');}si++;if(si<=4)document.getElementById(`ls-${si}`).classList.add('active');},900);
+  try{
+    const b64=currentImage.split(',')[1];
+    const mime=currentImage.split(';')[0].split(':')[1];
+    const hCtx=sessionHistory.length>0?`\n\nCONTEXTO ACUMULADO:\n`+sessionHistory.map((h,i)=>`Cap ${i+1} (${h.phase}): ${h.summary}`).join('\n'):'';
+    const sys=`Sos un experto en LoL para jungla, draft y builds. Parche: ${PATCH} (ddragon: ${DDV}).
+PERFIL: SIN LP CON RISAS #LPB (LAS) · Gold 3 Flex · 51% WR en 359 partidas · Pico Emerald S14
+PICKS: ${PROFILE.bestPicks.map(p=>`${p.name} ${p.wr} WR ${p.games}g ${p.meta} tier`).join(' | ')}
+EVITAR: ${PROFILE.avoid.join(', ')}
+Starters: Scorchclaw=7050, Gustwalker=7051, Mosstomper=7052
+Respondé SOLO con JSON:
+{"equipoPropio":{"picks":[],"bans":[]},"equipoEnemigo":{"picks":[],"bans":[]},"recomendacion":{"pick":"","razon":"","alternativas":[],"alertas":[]},"build":{"campeon":"","starter":"","starter_id":"","items":[],"items_ids":[],"runas":{"keystone":"","arbol_primario":"","primarias":[],"arbol_secundario":"","secundarias":[]},"orden_habilidades":"","nota":""},"matchups":{"amenazas":[{"campeon":"","nivel":"alto/medio/bajo","nota":""}],"objetivos_gank":[{"campeon":"","razon":""}],"ults_robables":[{"campeon":"","nota":""}]},"gameplan":"","alertas_generales":[]}`;
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,system:sys,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:mime,data:b64}},{type:'text',text:`Lobby LoL. Momento: ${selectedPhase}. Patch: ${PATCH}.${hCtx}\nRespondé solo JSON.`}]}]})});
+    const data=await res.json();
+    const raw=data.content?.map(c=>c.text||'').join('').trim();
+    clearInterval(stepInt);[1,2,3,4].forEach(i=>{document.getElementById(`ls-${i}`).classList.remove('active');document.getElementById(`ls-${i}`).classList.add('done');});
+    setTimeout(()=>{document.getElementById('loadingPanel').classList.remove('show');try{const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());renderAnalysis(parsed);addToSession(parsed);}catch{renderRaw(raw);}resetSteps();},300);
+  }catch(err){clearInterval(stepInt);document.getElementById('loadingPanel').classList.remove('show');renderErr(err.message);resetSteps();}
+  analyzeBtn.disabled=false;analyzeBtn.classList.remove('loading');analyzeBtn.textContent='⚔ Analizar lobby';clearImg();
+}
+
+function resetSteps(){[1,2,3,4].forEach(i=>document.getElementById(`ls-${i}`).classList.remove('active','done'));}
+
+function renderAnalysis(d){
+  document.getElementById('analysisPanel').classList.add('show');
+  document.getElementById('analysisTitle').textContent=d.recomendacion?.pick?`⚔ ${d.recomendacion.pick}`:'Análisis';
+  document.getElementById('analysisTime').textContent=`Patch ${PATCH} · ${new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}`;
+  let h='';
+  if(d.recomendacion){
+    const r=d.recomendacion;
+    h+=`<div><div class="block-title">Pick recomendado</div><div class="pick-rec"><div class="rec-left"><img src="${champImg(r.pick)}" alt="${r.pick}" class="rec-champ-img" onerror="this.style.display='none'"/><div class="rec-champion">${r.pick||'?'}</div><div class="rec-role">Jungla · ${PATCH}</div>${r.alternativas?.length?`<div class="rec-alts">${r.alternativas.map(a=>`<div class="alt-chip"><img src="${champImg(a)}" alt="${a}" class="alt-img" onerror="this.style.display='none'"/>${a}</div>`).join('')}</div>`:''}</div><div class="rec-right"><div class="rec-reason">${r.razon||''}</div>${d.gameplan?`<div class="rec-gameplan">🗺 ${d.gameplan}</div>`:''}</div></div></div>`;
+  }
+  const al=[...(d.recomendacion?.alertas||[]),...(d.alertas_generales||[])];
+  if(al.length){h+=`<div><div class="block-title">Alertas</div><div class="alerts-list">`;al.forEach(a=>h+=`<div class="alert alert-warn"><span class="alert-icon">⚠</span>${a}</div>`);h+=`</div></div>`;}
+  if(d.equipoPropio||d.equipoEnemigo){
+    h+=`<div><div class="block-title">Draft actual</div><div class="draft-table">`;
+    if(d.equipoPropio){h+=`<div class="draft-team dt-ally"><div class="dt-header"><div class="dt-header-dot" style="background:var(--green)"></div>Tu equipo</div>`;(d.equipoPropio.picks||[]).forEach(p=>h+=`<div class="dt-pick"><img src="${champImg(p)}" alt="${p}" class="dt-champ-img" onerror="this.style.display='none'"/>${p}</div>`);if(d.equipoPropio.bans?.length){h+=`<div class="dt-bans-label">Bans</div>`;d.equipoPropio.bans.forEach(b=>h+=`<div class="dt-ban"><img src="${champImg(b)}" alt="${b}" class="dt-ban-img" onerror="this.style.display='none'"/>${b}</div>`);}h+=`</div>`;}
+    if(d.equipoEnemigo){h+=`<div class="draft-team dt-enemy"><div class="dt-header"><div class="dt-header-dot" style="background:var(--red)"></div>Enemigos</div>`;(d.equipoEnemigo.picks||[]).forEach(p=>h+=`<div class="dt-pick"><img src="${champImg(p)}" alt="${p}" class="dt-champ-img" onerror="this.style.display='none'"/>${p}</div>`);if(d.equipoEnemigo.bans?.length){h+=`<div class="dt-bans-label">Bans</div>`;d.equipoEnemigo.bans.forEach(b=>h+=`<div class="dt-ban"><img src="${champImg(b)}" alt="${b}" class="dt-ban-img" onerror="this.style.display='none'"/>${b}</div>`);}h+=`</div>`;}
+    h+=`</div></div>`;
+  }
+  if(d.build){
+    const b=d.build;
+    h+=`<div><div class="block-title">Build — ${b.campeon||d.recomendacion?.pick||''}</div><div class="build-items">`;
+    if(b.starter){h+=`<div class="b-item b-starter"><img src="${itemImg(b.starter_id||'7050')}" alt="${b.starter}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="b-item-ph" style="display:none;">🌱</div><div class="b-item-num">STARTER</div><div class="b-item-name">${b.starter}</div></div>`;}
+    (b.items||[]).forEach((name,i)=>{const id=(b.items_ids||[])[i];h+=`<div class="b-item">${id?`<img src="${itemImg(id)}" alt="${name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="b-item-ph" style="display:none;">🔮</div>`:`<div class="b-item-ph">🔮</div>`}<div class="b-item-num">${i+1}</div><div class="b-item-name">${name}</div></div>`;});
+    h+=`</div>`;
+    if(b.nota)h+=`<div class="alert alert-good" style="margin-bottom:14px;"><span class="alert-icon">💡</span>${b.nota}</div>`;
+    if(b.runas){h+=`<div class="runes-grid"><div class="rune-block"><div class="rb-title">${b.runas.arbol_primario||'Primario'}</div><div class="rune-keystone">${b.runas.keystone||''}</div>${(b.runas.primarias||[]).map(r=>`<div class="rune-entry"><div class="re-dot"></div>${r}</div>`).join('')}</div><div class="rune-block"><div class="rb-title">${b.runas.arbol_secundario||'Secundario'}</div>${(b.runas.secundarias||[]).map(r=>`<div class="rune-entry"><div class="re-dot"></div>${r}</div>`).join('')}</div></div>`;}
+    if(b.orden_habilidades)h+=`<div class="skill-order">${b.orden_habilidades}</div><div class="skill-note">Orden de subida · Patch ${PATCH}</div>`;
+    h+=`</div>`;
+  }
+  if(d.matchups){
+    const has=d.matchups.amenazas?.length||d.matchups.objetivos_gank?.length||d.matchups.ults_robables?.length;
+    if(has){
+      h+=`<div><div class="block-title">Matchups & Objetivos</div><div class="matchup-list">`;
+      (d.matchups.amenazas||[]).forEach(a=>{const c=a.nivel==='alto'?'mu-high':a.nivel==='bajo'?'mu-low':'mu-mid';const t=a.nivel==='alto'?'tag-high':a.nivel==='bajo'?'tag-low':'tag-mid';const l=a.nivel==='alto'?'Alta amenaza':a.nivel==='bajo'?'Baja amenaza':'Amenaza media';h+=`<div class="mu-item ${c}"><img src="${champImg(a.campeon)}" alt="${a.campeon}" class="mu-champ-img" onerror="this.style.display='none'"/><div class="mu-info"><div class="mu-name">${a.campeon}</div><div class="mu-note">${a.nota}</div></div><div class="mu-tag ${t}">${l}</div></div>`;});
+      (d.matchups.objetivos_gank||[]).forEach(g=>{h+=`<div class="mu-item mu-gank"><img src="${champImg(g.campeon)}" alt="${g.campeon}" class="mu-champ-img" onerror="this.style.display='none'"/><div class="mu-info"><div class="mu-name">${g.campeon}</div><div class="mu-note">${g.razon}</div></div><div class="mu-tag tag-gank">Gank prio</div></div>`;});
+      (d.matchups.ults_robables||[]).forEach(u=>{const n=typeof u==='string'?u:u.campeon;const nt=typeof u==='object'?(u.nota||''):'';h+=`<div class="mu-item mu-ult"><img src="${champImg(n)}" alt="${n}" class="mu-champ-img" onerror="this.style.display='none'"/><div class="mu-info"><div class="mu-name">${n}</div><div class="mu-note">${nt||'Ult robable con Sylas'}</div></div><div class="mu-tag tag-ult">Ult robable</div></div>`;});
+      h+=`</div></div>`;
+    }
+  }
+  document.getElementById('fullAnalysis').innerHTML=h;
+}
+
+function renderRaw(t){document.getElementById('analysisPanel').classList.add('show');document.getElementById('fullAnalysis').innerHTML=`<div class="alert alert-warn"><span class="alert-icon">⚠</span>No se pudo parsear la respuesta.</div><pre style="font-size:11px;color:var(--text-secondary);white-space:pre-wrap;padding:12px;background:var(--bg-card);margin-top:10px;">${t}</pre>`;}
+function renderErr(msg){document.getElementById('analysisPanel').classList.add('show');document.getElementById('fullAnalysis').innerHTML=`<div class="alert alert-danger"><span class="alert-icon">✕</span>Error: ${msg}</div>`;}
+
+function addToSession(d){
+  captureCount++;
+  const pick=d.recomendacion?.pick||'?';
+  const enemies=d.equipoEnemigo?.picks?.join(', ')||'?';
+  const summary=`${pick} vs ${enemies}`;
+  const time=new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
+  sessionHistory.push({phase:selectedPhase,summary,data:d,time});
+  document.getElementById('sessionCount').textContent=`${captureCount} captura${captureCount!==1?'s':''}`;
+  if(sessionHistory.length>1){document.getElementById('ctxAccum').classList.add('show');document.getElementById('ctxCount').textContent=`${sessionHistory.length-1} prev`;document.getElementById('ctxText').textContent=`Contexto: ${sessionHistory.slice(0,-1).map(h=>h.summary.split(' vs ')[0]).join(' → ')}`;}
+  document.getElementById('tlWrap').style.display='block';
+  const tl=document.getElementById('tlItems');
+  const pc={bans:'dot-ban',picks:'dot-pick','mi-pick':'dot-pick',completo:'dot-build'};
+  const el=document.createElement('div');el.className='tl-item current';
+  el.innerHTML=`<div class="tl-dot ${pc[selectedPhase]||'dot-pick'}"></div><span class="tl-text">${summary}</span><span class="tl-time">${time}</span>`;
+  el.addEventListener('click',()=>renderAnalysis(d));
+  tl.querySelectorAll('.tl-item').forEach(i=>i.classList.remove('current'));
+  tl.insertBefore(el,tl.firstChild);
+  const pm={bans:1,picks:2,'mi-pick':3,completo:4};const cur=pm[selectedPhase]||1;
+  [1,2,3,4,5].forEach(i=>{const ps=document.getElementById(`ps-${i}`);ps.classList.remove('active','done');if(i<cur)ps.classList.add('done');else if(i===cur)ps.classList.add('active');});
+}
+</script>
+</body>
+</html>
